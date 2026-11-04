@@ -6,8 +6,8 @@
 #include <string>
 #include <cstddef>
 
-// Множество целых чисел от 0 до 10000.
-// Используется прямое адресование.
+// Множество целых чисел от 0 до 10000
+// Используется прямое адресование
 class IntegerSet {
 private:
     static constexpr int MIN_VALUE = 0;
@@ -49,7 +49,7 @@ public:
         return elementCount;
     }
 
-    // Загружает элементы из файла.
+    // Загружает элементы из файла
     bool loadFromFile(const std::string& fileName) {
         std::ifstream file(fileName);
 
@@ -77,7 +77,7 @@ public:
         return true;
     }
 
-    // Сохраняет текущее множество в файл.
+    // Сохраняет текущее множество в файл
     bool saveToFile(const std::string& fileName) const {
         std::ofstream file(fileName, std::ios::trunc);
 
@@ -103,7 +103,7 @@ bool parseValue(const std::string& text, int& value) {
     return (parser >> value) && !(parser >> extra);
 }
 
-// Выполнение команд множества.
+// Выполнение команд множества
 void processCommands(std::istream& input, IntegerSet& set) {
     std::string command;
     std::string rawValue;
@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
     bool fileSpecified = false;
     bool querySpecified = false;
 
-    // Обработка аргументов командной строки.
+    // Обработка аргументов командной строки
     for (int i = 1; i < argc; ++i) {
         std::string argument = argv[i];
 
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
 
     IntegerSet set;
 
-    // Загрузка существующих элементов.
+    // Загрузка существующих элементов
     if (fileSpecified) {
         std::ifstream check(fileName);
 
@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Выполнение запроса.
+    // Выполнение запроса
     if (querySpecified) {
         std::istringstream queryStream(query);
         processCommands(queryStream, set);
@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
         processCommands(std::cin, set);
     }
 
-    // Сохранение обновлённого множества.
+    // Сохранение обновлённого множества
     if (fileSpecified) {
         if (!set.saveToFile(fileName)) {
             return 1;

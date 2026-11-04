@@ -30,7 +30,7 @@ private:
                      int currentSum,
                      std::vector<int> currentGroup) {
 
-        // Последняя группа состоит из всех оставшихся элементов.
+        // Последняя группа состоит из всех оставшихся элементов
         if (groupIndex == groupCount - 1) {
             std::vector<int> lastGroup;
             int lastSum = 0;
@@ -50,7 +50,7 @@ private:
             return true;
         }
 
-        // Текущая группа набрала необходимую сумму.
+        // Текущая группа набрала необходимую сумму
         if (currentSum == targetSum) {
             answer.push_back(currentGroup);
 
@@ -122,8 +122,7 @@ public:
 
         groupCount = totalSum / targetSum;
 
-        // Проверяем, существует ли элемент,
-        // равный целевой сумме.
+        // Проверяем, существует ли элемент равный целевой сумме
         bool hasSingleElement = false;
 
         for (int value : numbers) {
@@ -133,8 +132,7 @@ public:
             }
         }
 
-        // Если такой элемент есть, сначала рассматриваем
-        // наибольшие элементы.
+        // Если такой элемент есть сначала рассматриваем наибольшие элементы
         if (hasSingleElement) {
             std::sort(numbers.rbegin(), numbers.rend());
         }
@@ -147,8 +145,7 @@ public:
             return false;
         }
 
-        // Возвращаем элементы каждой группы
-        // в исходный порядок ввода.
+        // Возвращаем элементы каждой группы в исходный порядок ввода
         for (auto& group : answer) {
             std::sort(
                 group.begin(),

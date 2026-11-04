@@ -25,7 +25,7 @@ private:
         ++generatedCount;
     }
 
-    // Рекурсивно выбирает элементы, начиная с указанной позиции.
+    // Рекурсивно выбирает элементы, начиная с указанной позиции
     void generateFrom(int startIndex, int requiredSize) {
         if (static_cast<int>(currentSubset.size()) == requiredSize) {
             printCurrentSubset();
@@ -48,7 +48,7 @@ public:
 
     void generateAll() {
         // Сначала выводим пустое множество, затем подмножества
-        // размером от 1 до N.
+        // размером от 1 до N
         for (int subsetSize = 0; subsetSize <= source.MSIZE(); ++subsetSize) {
             generateFrom(0, subsetSize);
         }

@@ -23,14 +23,14 @@ bool isValidTagName(const std::string& name) {
     return true;
 }
 
-// Проверка правильности XML с использованием стека из ЛР1.
+// Проверка правильности XML с использованием стека
 bool isCorrectXML(const std::string& xml) {
     Stack tags;
     std::size_t position = 0;
 
     while (position < xml.size()) {
 
-        // Пропускаем пробелы и другие пробельные символы.
+        // Пропуск пробелы и другие пробельные символы
         if (std::isspace(static_cast<unsigned char>(xml[position]))) {
             ++position;
             continue;
@@ -87,7 +87,7 @@ bool isCorrectXML(const std::string& xml) {
     return tags.isEmpty();
 }
 
-// Восстановление XML заменой одного символа.
+// Восстановление XML заменой одного символа
 
 bool restoreXML(std::string& xml) {
 
@@ -95,9 +95,9 @@ bool restoreXML(std::string& xml) {
         return true;
     }
 
-    // Два прохода:
-    // 1. Сначала исправляем символы в закрывающих тегах.
-    // 2. Затем проверяем остальные символы.
+    // Два прохода
+    // 1. Сначала исправляем символы в закрывающих тегах
+    // 2. Затем проверяем остальные символы
 
     for (int pass = 0; pass < 2; ++pass) {
 
@@ -109,8 +109,7 @@ bool restoreXML(std::string& xml) {
                 continue;
             }
 
-            // Определяем, находится ли позиция
-            // внутри имени закрывающего тега.
+            // Определяем, находится ли позиция внутри имени закрывающего тега
             bool isClosingName = false;
 
             for (std::size_t i = 0; i < position; ++i) {
@@ -164,7 +163,7 @@ int main() {
 
     std::string damagedXML;
 
-    // Считываем всю строку вместе с пробелами.
+    // Считываем всю строку вместе с пробелами
     if (!std::getline(std::cin, damagedXML)) {
         std::cerr << "Не удалось прочитать XML-строку.\n";
         return 1;

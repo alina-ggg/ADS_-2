@@ -49,7 +49,7 @@ public:
                 }
                 current = current->left;
             } else {
-                // Повторяющиеся ключи помещаются в правое поддерево.
+                // Повторяющиеся ключи помещаются в правое поддерево
                 if (current->right == nullptr) {
                     current->right = new TreeNode(value);
                     return;
@@ -65,7 +65,7 @@ public:
         }
 
         // Обход по уровням не использует рекурсию и не зависит
-        // от глубины дерева.
+        // от глубины дерева
         std::queue<const TreeNode*> nodes;
         nodes.push(root);
         int treeHeight = 0;
@@ -95,7 +95,7 @@ int main() {
     BinarySearchTree tree;
     int value;
 
-    // Ноль является признаком окончания ввода и в дерево не помещается.
+    // Ноль является признаком окончания ввода и в дерево не помещается
     while (std::cin >> value) {
         if (value == 0) {
             break;

@@ -27,7 +27,7 @@ private:
         return std::stoi(node->data.substr(separator + 1));
     }
 
-    // Отсоединение узла от списка.
+    // Отсоединение узла от списка
     void detachNode(DNode* node) {
         if (node->prev != nullptr) {
             node->prev->next = node->next;
@@ -45,7 +45,7 @@ private:
         node->next = nullptr;
     }
 
-    // Перемещение узла в начало списка.
+    // Перемещение узла в начало списка
     void moveToFront(DNode* node) {
         if (node == head) {
             return;
@@ -63,7 +63,7 @@ private:
         head = node;
     }
 
-    // Удаление наименее недавно использованного элемента.
+    // Удаление наименее недавно использованного элемента
     void removeLeastRecentlyUsed() {
         if (tail == nullptr) {
             return;
@@ -110,7 +110,7 @@ public:
         return extractValue(node);
     }
 
-    // Добавление или обновление элемента.
+    // Добавление или обновление элемента
     void set(int key, int value) {
         if (capacity <= 0) {
             return;
@@ -118,7 +118,7 @@ public:
 
         const auto found = nodeByKey.find(key);
 
-        // Если ключ уже существует, обновляем его значение.
+        // Если ключ уже существует, обновляем его значение
         if (found != nodeByKey.end()) {
             DNode* existingNode = found->second;
 
@@ -128,12 +128,12 @@ public:
             return;
         }
 
-        // Если кэш заполнен, удаляем наименее используемый элемент.
+        // Если кэш заполнен, удаляем наименее используемый элемент
         if (static_cast<int>(nodeByKey.size()) >= capacity) {
             removeLeastRecentlyUsed();
         }
 
-        // Добавляем новый элемент в начало списка.
+        // Добавляем новый элемент в начало списка
         DNode* newNode = LPUSHHEAD(
             head,
             tail,
@@ -165,7 +165,7 @@ int main() {
 
     LRUCache cache(cacheCapacity);
 
-    // Сохраняем результаты GET до завершения всех команд.
+    // Сохраняем результаты GET до завершения всех команд
     std::vector<int> results;
 
     for (int commandIndex = 0;
@@ -200,7 +200,7 @@ int main() {
         }
     }
 
-    // Выводим все результаты GET через пробел.
+    // Выводим все результаты GET через пробел
     for (std::size_t i = 0; i < results.size(); ++i) {
         if (i > 0) {
             std::cout << ' ';

@@ -32,8 +32,8 @@ std::size_t nextPrime(std::size_t number) {
     return number;
 }
 
-// Хеш-таблица с открытой адресацией.
-// Для второго способа пробирования шаг вычисляется отдельной хеш-функцией.
+// Хеш-таблица с открытой адресацией
+// Для второго способа пробирования шаг вычисляется отдельной хеш-функцией
 class HashTable {
 private:
     std::vector<std::string> keys;
@@ -47,7 +47,7 @@ private:
 
     std::size_t secondaryHash(const std::string& value) const {
         // Размер таблицы простое число, поэтому ненулевой шаг
-        // гарантированно взаимно прост с размером таблицы.
+        //  взаимно прост с размером таблицы
         const std::size_t hashValue = std::hash<std::string>{}(value + "#step");
         return 1 + hashValue % (keys.size() - 1);
     }
@@ -188,8 +188,8 @@ int runHashTableComparison() {
     return 0;
 }
 
-// Разбивает UTF-8-строку на последовательности байтов одного символа.
-// Это позволяет считать русские буквы одним символом, а не несколькими байтами.
+// Разбивает UTF-8-строку на последовательности байтов одного символа
+//  позволяет считать русские буквы одним символом, а не несколькими байтами
 std::vector<std::string> splitUTF8(const std::string& value) {
     std::vector<std::string> symbols;
 
