@@ -7,151 +7,156 @@ import (
 	"sort"
 )
 
-// IntegerSet удаляет повторы, поскольку входные данные рассматриваются
-// как множество натуральных чисел.
-type IntegerSet struct {
-	values map[int]struct{}
-}
+type IntegerSet struct{ values map[int]struct{} }
 
-func newIntegerSet() *IntegerSet {
-	return &IntegerSet{values: make(map[int]struct{})}
-}
-
+func newIntegerSet() *IntegerSet { return &IntegerSet{values: make(map[int]struct{})} }
 func (set *IntegerSet) Add(value int) bool {
 	if _, exists := set.values[value]; exists {
 		return false
 	}
-
 	set.values[value] = struct{}{}
 	return true
 }
 
-// PartitionSolver ищет разбиение всех чисел на группы одинаковой суммы.
-type PartitionSolver struct {
-	numbers    []int
-	used       []bool
-	groups     [][]int
-	targetSum  int
-	groupCount int
+type SetPartitionSolver struct {
+	numbers       []int
+	originalOrder []int
+	used          []bool
+	answer        [][]int
+	targetSum     int
+	groupCount    int
 }
 
-func newPartitionSolver(numbers []int, target int) *PartitionSolver {
-	copyOfNumbers := append([]int(nil), numbers...)
-	return &PartitionSolver{
-		numbers:   copyOfNumbers,
-		used:      make([]bool, len(copyOfNumbers)),
-		targetSum: target,
+func newSetPartitionSolver(input []int, target int) *SetPartitionSolver {
+	numbers := append([]int(nil), input...)
+	return &SetPartitionSolver{
+		numbers:       numbers,
+		originalOrder: append([]int(nil), input...),
+		used:          make([]bool, len(input)),
+		targetSum:     target,
 	}
 }
 
-// buildGroups строит очередную группу рекурсивным перебором комбинаций.
-// Текущий список передаётся как аргумент, поэтому откат не изменяет
-// состояние соседних ветвей поиска.
-func (solver *PartitionSolver) buildGroups(
-	groupIndex int,
-	startIndex int,
-	currentSum int,
-	currentGroup []int,
-) bool {
+func (solver *SetPartitionSolver) buildGroups(groupIndex, startIndex, currentSum int, currentGroup []int) bool {
 	if groupIndex == solver.groupCount-1 {
 		lastGroup := make([]int, 0)
 		lastSum := 0
-
-		for index, value := range solver.numbers {
-			if !solver.used[index] {
+		for i, value := range solver.numbers {
+			if !solver.used[i] {
 				lastGroup = append(lastGroup, value)
 				lastSum += value
 			}
 		}
-
 		if lastSum != solver.targetSum {
 			return false
 		}
-
-		solver.groups = append(solver.groups, lastGroup)
+		solver.answer = append(solver.answer, lastGroup)
 		return true
 	}
 
 	if currentSum == solver.targetSum {
-		completedGroup := append([]int(nil), currentGroup...)
-		solver.groups = append(solver.groups, completedGroup)
-
+		solver.answer = append(solver.answer, append([]int(nil), currentGroup...))
 		if solver.buildGroups(groupIndex+1, 0, 0, []int{}) {
 			return true
 		}
-
-		solver.groups = solver.groups[:len(solver.groups)-1]
+		solver.answer = solver.answer[:len(solver.answer)-1]
 		return false
 	}
 
 	previousValue := -1
-
-	for index := startIndex; index < len(solver.numbers); index++ {
-		value := solver.numbers[index]
-
-		if solver.used[index] {
+	for i := startIndex; i < len(solver.numbers); i++ {
+		value := solver.numbers[i]
+		if solver.used[i] || value == previousValue || currentSum+value > solver.targetSum {
 			continue
 		}
-		if value == previousValue {
-			continue
-		}
-		if currentSum+value > solver.targetSum {
-			continue
-		}
-
 		previousValue = value
-		solver.used[index] = true
+		solver.used[i] = true
 		nextGroup := append(append([]int(nil), currentGroup...), value)
-
-		if solver.buildGroups(groupIndex, index+1, currentSum+value, nextGroup) {
+		if solver.buildGroups(groupIndex, i+1, currentSum+value, nextGroup) {
 			return true
 		}
-
-		solver.used[index] = false
-
-		// Если группа пока пуста и выбранное наименьшее число
-		// не привело к решению, проверять другие первые элементы не нужно.
-		if currentSum == 0 {
-			return false
-		}
+		solver.used[i] = false
 	}
-
 	return false
 }
 
-func (solver *PartitionSolver) Solve() bool {
+func (solver *SetPartitionSolver) Solve() bool {
 	if len(solver.numbers) == 0 || solver.targetSum <= 0 {
 		return false
 	}
-
-	totalSum := 0
+	total := 0
 	for _, value := range solver.numbers {
-		totalSum += value
+		total += value
 	}
+	if total%solver.targetSum != 0 {
+		return false
+	}
+	solver.groupCount = total / solver.targetSum
 
-	if totalSum == 0 || totalSum%solver.targetSum != 0 {
+	hasSingleElement := false
+	for _, value := range solver.numbers {
+		if value == solver.targetSum {
+			hasSingleElement = true
+			break
+		}
+	}
+	if hasSingleElement {
+		sort.Sort(sort.Reverse(sort.IntSlice(solver.numbers)))
+	}
+	if len(solver.numbers) == 0 || solver.numbers[0] > solver.targetSum {
+		return false
+	}
+	if !solver.buildGroups(0, 0, 0, []int{}) {
 		return false
 	}
 
-	solver.groupCount = totalSum / solver.targetSum
-	sort.Sort(sort.Reverse(sort.IntSlice(solver.numbers)))
-
-	if solver.numbers[0] > solver.targetSum {
-		return false
+	// Восстанавливаем исходный порядок элементов внутри каждой группы.
+	position := make(map[int]int, len(solver.originalOrder))
+	for i, value := range solver.originalOrder {
+		position[value] = i
 	}
-
-	return solver.buildGroups(0, 0, 0, []int{})
+	for _, group := range solver.answer {
+		sort.Slice(group, func(i, j int) bool { return position[group[i]] < position[group[j]] })
+	}
+	return true
 }
 
-func (solver *PartitionSolver) PrintAnswer() {
-	for groupIndex, group := range solver.groups {
-		if groupIndex > 0 {
+func main() {
+	input := bufio.NewReader(os.Stdin)
+	var count int
+	if _, err := fmt.Fscan(input, &count); err != nil || count <= 0 || count > 30 {
+		fmt.Fprintln(os.Stderr, "Количество элементов должно быть от 1 до 30.")
+		os.Exit(1)
+	}
+	unique := newIntegerSet()
+	numbers := make([]int, 0, count)
+	for i := 0; i < count; i++ {
+		var value int
+		if _, err := fmt.Fscan(input, &value); err != nil || value <= 0 {
+			fmt.Fprintln(os.Stderr, "Все элементы должны быть натуральными числами.")
+			os.Exit(1)
+		}
+		if unique.Add(value) {
+			numbers = append(numbers, value)
+		}
+	}
+	var target int
+	if _, err := fmt.Fscan(input, &target); err != nil {
+		fmt.Fprintln(os.Stderr, "Не задана целевая сумма группы.")
+		os.Exit(1)
+	}
+	solver := newSetPartitionSolver(numbers, target)
+	if !solver.Solve() {
+		fmt.Println("Impossible")
+		return
+	}
+	for i, group := range solver.answer {
+		if i > 0 {
 			fmt.Print(" | ")
 		}
-
 		fmt.Print("{")
-		for elementIndex, value := range group {
-			if elementIndex > 0 {
+		for j, value := range group {
+			if j > 0 {
 				fmt.Print(", ")
 			}
 			fmt.Print(value)
@@ -159,43 +164,4 @@ func (solver *PartitionSolver) PrintAnswer() {
 		fmt.Print("}")
 	}
 	fmt.Println()
-}
-
-func main() {
-	input := bufio.NewReader(os.Stdin)
-
-	var count int
-	if _, err := fmt.Fscan(input, &count); err != nil || count <= 0 || count > 30 {
-		fmt.Fprintln(os.Stderr, "Количество элементов должно быть от 1 до 30.")
-		return
-	}
-
-	uniqueNumbers := newIntegerSet()
-	numbers := make([]int, 0, count)
-
-	for index := 0; index < count; index++ {
-		var value int
-		if _, err := fmt.Fscan(input, &value); err != nil || value <= 0 {
-			fmt.Fprintln(os.Stderr, "Все элементы должны быть натуральными числами.")
-			return
-		}
-
-		if uniqueNumbers.Add(value) {
-			numbers = append(numbers, value)
-		}
-	}
-
-	var target int
-	if _, err := fmt.Fscan(input, &target); err != nil {
-		fmt.Fprintln(os.Stderr, "Не задана целевая сумма группы.")
-		return
-	}
-
-	solver := newPartitionSolver(numbers, target)
-	if !solver.Solve() {
-		fmt.Println("Impossible")
-		return
-	}
-
-	solver.PrintAnswer()
 }

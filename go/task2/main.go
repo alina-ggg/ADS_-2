@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -13,133 +14,171 @@ const (
 	maxValue = 10000
 )
 
-// IntegerSet реализует множество прямым адресованием.
-// Индекс массива совпадает со значением элемента.
+// Множество с прямым адресованием
 type IntegerSet struct {
 	elements [maxValue + 1]bool
-	size     int
+	count    int
 }
 
-func NewIntegerSet() *IntegerSet {
-	return &IntegerSet{}
-}
-
-func isValidValue(value int) bool {
-	return value >= minValue && value <= maxValue
-}
-
+func (set *IntegerSet) valid(value int) bool { return value >= minValue && value <= maxValue }
 func (set *IntegerSet) Add(value int) bool {
-	if !isValidValue(value) || set.elements[value] {
+	if !set.valid(value) || set.elements[value] {
 		return false
 	}
-
 	set.elements[value] = true
-	set.size++
+	set.count++
 	return true
 }
-
-func (set *IntegerSet) Delete(value int) bool {
-	if !isValidValue(value) || !set.elements[value] {
+func (set *IntegerSet) Remove(value int) bool {
+	if !set.valid(value) || !set.elements[value] {
 		return false
 	}
-
 	set.elements[value] = false
-	set.size--
+	set.count--
 	return true
 }
-
 func (set *IntegerSet) Contains(value int) bool {
-	return isValidValue(value) && set.elements[value]
+	return set.valid(value) && set.elements[value]
 }
+func (set *IntegerSet) Size() int { return set.count }
 
-func (set *IntegerSet) Size() int {
-	return set.size
-}
-
-// executeCommand обрабатывает одну команду множества.
-func executeCommand(command string, rawValue string, set *IntegerSet) {
-	value, err := strconv.Atoi(rawValue)
-	if err != nil || !isValidValue(value) {
-		fmt.Fprintln(os.Stderr, "Значение должно быть целым числом от 0 до 10000.")
-		return
+func (set *IntegerSet) LoadFromFile(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("не удалось открыть файл: %w", err)
 	}
-
-	switch command {
-	case "SETADD":
-		set.Add(value)
-		fmt.Println("OK")
-	case "SETDEL":
-		set.Delete(value)
-		fmt.Println("OK")
-	case "SET_AT":
-		fmt.Println(set.Contains(value))
-	default:
-		fmt.Fprintf(os.Stderr, "Неизвестная команда: %s\n", command)
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		value, parseErr := strconv.Atoi(scanner.Text())
+		if parseErr != nil {
+			return fmt.Errorf("ошибка чтения файла: некорректный элемент %q", scanner.Text())
+		}
+		if !set.Add(value) && !set.valid(value) {
+			fmt.Fprintf(os.Stderr, "Некорректный элемент: %d\n", value)
+		}
 	}
+	return scanner.Err()
 }
 
-// processInput считывает команды построчно.
-func processInput(input *bufio.Scanner, set *IntegerSet) {
-	for input.Scan() {
-		parts := strings.Fields(input.Text())
-		if len(parts) != 2 {
-			if len(parts) != 0 {
-				fmt.Fprintln(os.Stderr, "Команда должна содержать операцию и один аргумент.")
+func (set *IntegerSet) SaveToFile(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("не удалось сохранить файл: %w", err)
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	for value := minValue; value <= maxValue; value++ {
+		if set.elements[value] {
+			if _, err := fmt.Fprintln(writer, value); err != nil {
+				return err
 			}
+		}
+	}
+	return writer.Flush()
+}
+
+func processCommands(input io.Reader, set *IntegerSet) {
+	scanner := bufio.NewScanner(input)
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		command := scanner.Text()
+		if !scanner.Scan() {
+			fmt.Fprintln(os.Stderr, "Не указано значение для команды.")
+			break
+		}
+		rawValue := scanner.Text()
+		value, err := strconv.Atoi(rawValue)
+		if err != nil || !set.valid(value) {
+			fmt.Fprintln(os.Stderr, "Значение должно быть от 0 до 10000.")
 			continue
 		}
-
-		executeCommand(parts[0], parts[1], set)
+		switch command {
+		case "SETADD":
+			if set.Add(value) {
+				fmt.Println("OK")
+			} else {
+				fmt.Println("EXISTS")
+			}
+		case "SETDEL":
+			if set.Remove(value) {
+				fmt.Println("OK")
+			} else {
+				fmt.Println("NOT FOUND")
+			}
+		case "SET_AT":
+			if set.Contains(value) {
+				fmt.Println("true")
+			} else {
+				fmt.Println("false")
+			}
+		default:
+			fmt.Fprintln(os.Stderr, "Неизвестная команда:", command)
+		}
 	}
-
-	if err := input.Err(); err != nil {
+	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Ошибка чтения команд:", err)
 	}
 }
 
 func main() {
-	set := NewIntegerSet()
-	arguments := os.Args[1:]
-	inputWasSpecified := false
+	var filename, query string
+	fileSpecified, querySpecified := false, false
 
-	for index := 0; index < len(arguments); index++ {
-		switch arguments[index] {
+	for i := 1; i < len(os.Args); i++ {
+		switch os.Args[i] {
 		case "--file":
-			if index+1 >= len(arguments) {
+			if i+1 >= len(os.Args) {
 				fmt.Fprintln(os.Stderr, "После --file необходимо указать имя файла.")
-				return
+				os.Exit(1)
 			}
-
-			fileName := arguments[index+1]
-			index++
-			file, err := os.Open(fileName)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Не удалось открыть файл:", err)
-				return
-			}
-
-			processInput(bufio.NewScanner(file), set)
-			file.Close()
-			inputWasSpecified = true
-
+			i++
+			filename = os.Args[i]
+			fileSpecified = true
 		case "--query":
-			if index+1 >= len(arguments) {
-				fmt.Fprintln(os.Stderr, "После --query необходимо указать строку команд.")
-				return
+			if i+1 >= len(os.Args) {
+				fmt.Fprintln(os.Stderr, "После --query необходимо указать запрос.")
+				os.Exit(1)
 			}
-
-			query := arguments[index+1]
-			index++
-			processInput(bufio.NewScanner(strings.NewReader(query)), set)
-			inputWasSpecified = true
-
+			i++
+			query = os.Args[i]
+			querySpecified = true
 		default:
-			fmt.Fprintln(os.Stderr, "Неизвестный аргумент:", arguments[index])
-			return
+			fmt.Fprintln(os.Stderr, "Некорректный аргумент:", os.Args[i])
+			os.Exit(1)
 		}
 	}
 
-	if !inputWasSpecified {
-		processInput(bufio.NewScanner(os.Stdin), set)
+	set := &IntegerSet{}
+	if fileSpecified {
+		if _, err := os.Stat(filename); err != nil {
+			if !os.IsNotExist(err) {
+				fmt.Fprintln(os.Stderr, "Не удалось открыть файл:", err)
+				os.Exit(1)
+			}
+			file, createErr := os.Create(filename)
+			if createErr != nil {
+				fmt.Fprintln(os.Stderr, "Не удалось создать файл:", createErr)
+				os.Exit(1)
+			}
+			file.Close()
+		} else if err := set.LoadFromFile(filename); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
+
+	if querySpecified {
+		processCommands(strings.NewReader(query), set)
+	} else {
+		processCommands(os.Stdin, set)
+	}
+
+	if fileSpecified {
+		if err := set.SaveToFile(filename); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 }

@@ -4,88 +4,67 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+
+	"lab2/lab1"
 )
 
-// SubsetGenerator хранит исходный массив из лабораторной №1
-// и текущую комбинацию, которая формируется рекурсивно.
 type SubsetGenerator struct {
-	source         *Strarray
+	source         *lab1.Strarray
 	currentSubset  []string
 	generatedCount int
 }
 
-func NewSubsetGenerator(source *Strarray) *SubsetGenerator {
-	return &SubsetGenerator{
-		source:         source,
-		currentSubset:  make([]string, 0),
-		generatedCount: 0,
-	}
+func NewSubsetGenerator(source *lab1.Strarray) *SubsetGenerator {
+	return &SubsetGenerator{source: source, currentSubset: make([]string, 0)}
 }
 
 func (generator *SubsetGenerator) printCurrentSubset() {
 	fmt.Print("{")
-
-	for index, value := range generator.currentSubset {
-		if index > 0 {
+	for i, value := range generator.currentSubset {
+		if i > 0 {
 			fmt.Print(", ")
 		}
 		fmt.Print(value)
 	}
-
 	fmt.Println("}")
 	generator.generatedCount++
 }
 
-// generateOfSize выводит все подмножества заданного размера.
-// Параметр startIndex не позволяет повторно выбирать уже использованные
-// позиции и тем самым исключает перестановки одинакового подмножества.
-func (generator *SubsetGenerator) generateOfSize(startIndex int, requiredSize int) {
+func (generator *SubsetGenerator) generateFrom(startIndex, requiredSize int) {
 	if len(generator.currentSubset) == requiredSize {
 		generator.printCurrentSubset()
 		return
 	}
-
 	remaining := requiredSize - len(generator.currentSubset)
 	lastPossibleIndex := generator.source.MSIZE() - remaining
-
 	for index := startIndex; index <= lastPossibleIndex; index++ {
-		value := generator.source.ValueAt(index)
-		generator.currentSubset = append(generator.currentSubset, value)
-
-		generator.generateOfSize(index+1, requiredSize)
-
-		// Возвращаем длину текущего набора к значению до рекурсивного вызова.
+		generator.currentSubset = append(generator.currentSubset, generator.source.MVALUE_index(index))
+		generator.generateFrom(index+1, requiredSize)
 		generator.currentSubset = generator.currentSubset[:len(generator.currentSubset)-1]
 	}
 }
 
 func (generator *SubsetGenerator) GenerateAll() {
-	for subsetSize := 0; subsetSize <= generator.source.MSIZE(); subsetSize++ {
-		generator.generateOfSize(0, subsetSize)
+	for size := 0; size <= generator.source.MSIZE(); size++ {
+		generator.generateFrom(0, size)
 	}
 }
 
 func main() {
 	input := bufio.NewReader(os.Stdin)
-
 	var count int
 	if _, err := fmt.Fscan(input, &count); err != nil || count < 0 || count > 25 {
 		fmt.Fprintln(os.Stderr, "Количество элементов должно быть от 0 до 25.")
-		return
+		os.Exit(1)
 	}
-
-	array := NewStrarray()
-
-	for index := 0; index < count; index++ {
+	array := lab1.NewStrarray()
+	for i := 0; i < count; i++ {
 		var value string
 		if _, err := fmt.Fscan(input, &value); err != nil {
 			fmt.Fprintln(os.Stderr, "Не удалось прочитать элемент массива.")
-			return
+			os.Exit(1)
 		}
-
 		array.MPUSH_end(value)
 	}
-
-	generator := NewSubsetGenerator(array)
-	generator.GenerateAll()
+	NewSubsetGenerator(array).GenerateAll()
 }

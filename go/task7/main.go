@@ -5,81 +5,71 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
+
+	"lab2/lab1"
 )
 
-// LRUCache использует двусвязный список из лабораторной №1
-// и map для быстрого доступа к узлу по ключу.
+// LRU-кэш использует узел DNode и двусвязный список из лаб №1
+// Голова списка — самый недавно использованный элемент, хвост — самый старый
 type LRUCache struct {
-	capacity int
-	head     *DNode
-	tail     *DNode
-	index    map[int]*DNode
+	capacity  int
+	head      *lab1.DNode
+	tail      *lab1.DNode
+	nodeByKey map[int]*lab1.DNode
 }
 
 func NewLRUCache(capacity int) *LRUCache {
 	return &LRUCache{
-		capacity: capacity,
-		head:     nil,
-		tail:     nil,
-		index:    make(map[int]*DNode),
+		capacity:  capacity,
+		nodeByKey: make(map[int]*lab1.DNode),
 	}
 }
 
-func encodePair(key int, value int) string {
-	return strconv.Itoa(key) + ":" + strconv.Itoa(value)
-}
+func makeNodeData(key, value int) string { return strconv.Itoa(key) + ":" + strconv.Itoa(value) }
 
-func decodeKey(node *DNode) int {
-	separator := strings.IndexByte(node.data, ':')
-	key, _ := strconv.Atoi(node.data[:separator])
+func extractKey(node *lab1.DNode) int {
+	separator := 0
+	for separator < len(node.Data) && node.Data[separator] != ':' {
+		separator++
+	}
+	key, _ := strconv.Atoi(node.Data[:separator])
 	return key
 }
-
-func decodeValue(node *DNode) int {
-	separator := strings.IndexByte(node.data, ':')
-	value, _ := strconv.Atoi(node.data[separator+1:])
+func extractValue(node *lab1.DNode) int {
+	separator := 0
+	for separator < len(node.Data) && node.Data[separator] != ':' {
+		separator++
+	}
+	value, _ := strconv.Atoi(node.Data[separator+1:])
 	return value
 }
 
-// detachNode удаляет узел из текущей позиции, не освобождая память.
-func (cache *LRUCache) detachNode(node *DNode) {
-	if node.prev != nil {
-		node.prev.next = node.next
+func (cache *LRUCache) detachNode(node *lab1.DNode) {
+	if node.Prev != nil {
+		node.Prev.Next = node.Next
 	} else {
-		cache.head = node.next
+		cache.head = node.Next
 	}
-
-	if node.next != nil {
-		node.next.prev = node.prev
+	if node.Next != nil {
+		node.Next.Prev = node.Prev
 	} else {
-		cache.tail = node.prev
+		cache.tail = node.Prev
 	}
-
-	node.prev = nil
-	node.next = nil
+	node.Prev = nil
+	node.Next = nil
 }
 
-// moveToFront перемещает узел в голову списка.
-// Голова соответствует наиболее недавно использованному элементу.
-func (cache *LRUCache) moveToFront(node *DNode) {
-	if cache.head == node {
+func (cache *LRUCache) moveToFront(node *lab1.DNode) {
+	if node == cache.head {
 		return
 	}
-
-	if node.prev != nil || node.next != nil || cache.tail == node {
-		cache.detachNode(node)
-	}
-
-	node.prev = nil
-	node.next = cache.head
-
+	cache.detachNode(node)
+	node.Next = cache.head
 	if cache.head != nil {
-		cache.head.prev = node
+		cache.head.Prev = node
 	} else {
 		cache.tail = node
 	}
-
 	cache.head = node
 }
 
@@ -87,109 +77,81 @@ func (cache *LRUCache) removeLeastRecentlyUsed() {
 	if cache.tail == nil {
 		return
 	}
-
-	oldNode := cache.tail
-	oldKey := decodeKey(oldNode)
-
-	cache.detachNode(oldNode)
-	delete(cache.index, oldKey)
+	oldest := cache.tail
+	delete(cache.nodeByKey, extractKey(oldest))
+	cache.detachNode(oldest)
 }
 
-// Get возвращает значение по ключу и обновляет порядок использования.
-// Если ключ отсутствует, возвращается -1.
+// Get возвращает значение по ключу или -1 и обновляет порядок использования
 func (cache *LRUCache) Get(key int) int {
-	node, exists := cache.index[key]
+	node, exists := cache.nodeByKey[key]
 	if !exists {
 		return -1
 	}
-
 	cache.moveToFront(node)
-	return decodeValue(node)
+	return extractValue(node)
 }
 
-// Set добавляет новую пару или обновляет существующую.
-// При переполнении удаляется элемент из хвоста списка.
-func (cache *LRUCache) Set(key int, value int) {
+// Set добавляет пару или обновляет существующую При переполнении
+// удаляется пара, к которой дольше всего не обращались
+func (cache *LRUCache) Set(key, value int) {
 	if cache.capacity <= 0 {
 		return
 	}
-
-	if node, exists := cache.index[key]; exists {
-		node.data = encodePair(key, value)
+	if node, exists := cache.nodeByKey[key]; exists {
+		node.Data = makeNodeData(key, value)
 		cache.moveToFront(node)
 		return
 	}
-
-	if len(cache.index) >= cache.capacity {
+	if len(cache.nodeByKey) >= cache.capacity {
 		cache.removeLeastRecentlyUsed()
 	}
-
-	newNode := &DNode{data: encodePair(key, value)}
-	cache.moveToFront(newNode)
-	cache.index[key] = newNode
+	node := lab1.LPUSHHEAD(&cache.head, &cache.tail, makeNodeData(key, value))
+	cache.nodeByKey[key] = node
 }
 
-func (cache *LRUCache) Size() int {
-	return len(cache.index)
-}
-
-func (cache *LRUCache) Clear() {
-	current := cache.head
-
-	for current != nil {
-		next := current.next
-		current.prev = nil
-		current.next = nil
-		current = next
-	}
-
-	cache.head = nil
-	cache.tail = nil
-	cache.index = make(map[int]*DNode)
-}
+func (cache *LRUCache) Size() int { return len(cache.nodeByKey) }
 
 func main() {
 	input := bufio.NewReader(os.Stdin)
-
-	var capacity int
-	var commandCount int
-	if _, err := fmt.Fscan(input, &capacity, &commandCount); err != nil ||
-		capacity < 0 || commandCount < 0 {
+	var capacity, commandCount int
+	if _, err := fmt.Fscan(input, &capacity, &commandCount); err != nil || capacity < 0 || commandCount < 0 {
 		fmt.Fprintln(os.Stderr, "Некорректные параметры LRU-кэша.")
-		return
+		os.Exit(1)
 	}
-
 	cache := NewLRUCache(capacity)
-	results := make([]string, 0)
+	results := make([]int, 0)
 
 	for commandIndex := 0; commandIndex < commandCount; commandIndex++ {
 		var command string
 		var key int
-
 		if _, err := fmt.Fscan(input, &command, &key); err != nil {
 			fmt.Fprintln(os.Stderr, "Не удалось прочитать команду кэша.")
-			return
+			os.Exit(1)
 		}
-
 		switch command {
 		case "SET":
 			var value int
 			if _, err := fmt.Fscan(input, &value); err != nil {
 				fmt.Fprintln(os.Stderr, "Для SET необходимо указать значение.")
-				return
+				os.Exit(1)
 			}
 			cache.Set(key, value)
-
 		case "GET":
-			results = append(results, strconv.Itoa(cache.Get(key)))
-
+			results = append(results, cache.Get(key))
 		default:
 			fmt.Fprintln(os.Stderr, "Неизвестная команда кэша:", command)
-			return
+			os.Exit(1)
 		}
 	}
 
-	output := bufio.NewWriter(os.Stdout)
-	fmt.Fprintln(output, strings.Join(results, " "))
-	output.Flush()
+	writer := bufio.NewWriter(os.Stdout)
+	for i, value := range results {
+		if i > 0 {
+			fmt.Fprint(writer, " ")
+		}
+		fmt.Fprint(writer, value)
+	}
+	fmt.Fprintln(writer)
+	writer.Flush()
 }

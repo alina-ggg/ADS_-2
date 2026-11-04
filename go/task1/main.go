@@ -5,33 +5,34 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"lab2/lab1"
 )
 
 const allowedSymbols = "abcdefghijklmnopqrstuvwxyz<>/"
 
-// isValidTagName проверяет допустимость имени открывающего
-// или закрывающего XML-тега по условиям задания.
 func isValidTagName(name string) bool {
-	if len(name) == 0 {
+	if name == "" {
 		return false
 	}
-
 	for _, symbol := range name {
 		if symbol < 'a' || symbol > 'z' {
 			return false
 		}
 	}
-
 	return true
 }
 
-// isCorrectXML проверяет порядок и парность XML-тегов.
-// Для хранения открытых тегов применяется стек из лабораторной №1.
+// Проверка XML использует стек из лабораторной работы №1
 func isCorrectXML(xml string) bool {
-	stack := NewStack()
+	tags := lab1.NewStack()
 	position := 0
 
 	for position < len(xml) {
+		if strings.ContainsRune(" \t\n\r\v\f", rune(xml[position])) {
+			position++
+			continue
+		}
 		if xml[position] != '<' {
 			return false
 		}
@@ -40,7 +41,6 @@ func isCorrectXML(xml string) bool {
 		if relativeEnd < 0 {
 			return false
 		}
-
 		closingPosition := position + 1 + relativeEnd
 		tagBody := xml[position+1 : closingPosition]
 		if tagBody == "" {
@@ -52,78 +52,86 @@ func isCorrectXML(xml string) bool {
 		if closingTag {
 			tagName = tagBody[1:]
 		}
-
 		if !isValidTagName(tagName) {
 			return false
 		}
 
 		if closingTag {
-			if stack.IsEmpty() {
-				return false
-			}
-
-			openedName := stack.Pop()
-			if openedName != tagName {
+			if tags.IsEmpty() || tags.Pop() != tagName {
 				return false
 			}
 		} else {
-			stack.Push(tagName)
+			tags.Push(tagName)
 		}
-
 		position = closingPosition + 1
 	}
-
-	return stack.IsEmpty()
+	return tags.IsEmpty()
 }
 
-// restoreXML перебирает все позиции и все допустимые символы.
-// Изменяется ровно один символ исходной строки.
-func restoreXML(damaged string) (string, bool) {
-	characters := []byte(damaged)
+func restoreXML(xml string) (string, bool) {
+	if isCorrectXML(xml) {
+		return xml, true
+	}
+	characters := []byte(xml)
 
-	for position := 0; position < len(characters); position++ {
-		originalSymbol := characters[position]
-
-		for index := 0; index < len(allowedSymbols); index++ {
-			replacement := allowedSymbols[index]
-			if replacement == originalSymbol {
+	for pass := 0; pass < 2; pass++ {
+		for position := 0; position < len(characters); position++ {
+			if strings.ContainsRune(" \t\n\r\v\f", rune(characters[position])) {
 				continue
 			}
 
-			characters[position] = replacement
-			candidate := string(characters)
-
-			if isCorrectXML(candidate) {
-				return candidate, true
+			isClosingName := false
+			for i := 0; i < position; i++ {
+				if characters[i] == '<' {
+					isClosingName = false
+				}
+				if characters[i] == '/' && i > 0 && characters[i-1] == '<' {
+					isClosingName = true
+				}
+				if characters[i] == '>' {
+					isClosingName = false
+				}
 			}
+			if pass == 0 && !isClosingName {
+				continue
+			}
+			if pass == 1 && isClosingName {
+				continue
+			}
+
+			original := characters[position]
+			for i := 0; i < len(allowedSymbols); i++ {
+				replacement := allowedSymbols[i]
+				if replacement == original {
+					continue
+				}
+				characters[position] = replacement
+				if isCorrectXML(string(characters)) {
+					return string(characters), true
+				}
+			}
+			characters[position] = original
 		}
-
-		characters[position] = originalSymbol
 	}
-
 	return "", false
 }
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 1024), 4096)
-
 	if !scanner.Scan() {
 		fmt.Fprintln(os.Stderr, "Не удалось прочитать XML-строку.")
-		return
+		os.Exit(1)
 	}
-
-	damagedXML := strings.TrimSpace(scanner.Text())
+	damagedXML := scanner.Text()
 	if len(damagedXML) < 7 || len(damagedXML) > 1000 {
 		fmt.Fprintln(os.Stderr, "Длина строки должна быть от 7 до 1000 символов.")
-		return
+		os.Exit(1)
 	}
-
-	restoredXML, success := restoreXML(damagedXML)
-	if !success {
+	restored, ok := restoreXML(damagedXML)
+	if !ok {
 		fmt.Println("Incorrect")
 		return
 	}
-
-	fmt.Println(restoredXML)
+	fmt.Println(restored)
 }

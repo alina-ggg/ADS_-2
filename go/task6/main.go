@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"hash/fnv"
 	"os"
+	"strings"
 	"time"
 )
 
-// HashTable — таблица с открытой адресацией.
+// HashTable — таблица с открытой адресацией
 // В зависимости от параметра doubleHashing используется линейное
-// пробирование или двойное хеширование.
+// пробирование или двойное хеширование
 type HashTable struct {
 	keys          []string
 	occupied      []bool
@@ -195,44 +196,47 @@ func runHashTableComparison() {
 	printExperiment("Double hashing", doubleResult)
 }
 
-// longestUniqueSubstring применяет алгоритм скользящего окна.
-// В map хранится последняя позиция каждого символа строки.
-func longestUniqueSubstring(value string) int {
+// Результат содержит длину и саму максимальную подстроку.
+type SubstringResult struct {
+	length    int
+	substring string
+}
+
+// Алгоритм скользящего окна. Символы обрабатываются как Unicode-rune,
+// что соответствует разбиению UTF-8 строки на символы в C++.
+func longestUniqueSubstring(value string) SubstringResult {
 	symbols := []rune(value)
 	lastPosition := make(map[rune]int)
-
-	leftBorder := 0
-	maximumLength := 0
+	leftBorder, maximumLength, bestStart := 0, 0, 0
 
 	for rightBorder, currentSymbol := range symbols {
 		previousPosition, exists := lastPosition[currentSymbol]
 		if exists && previousPosition >= leftBorder {
 			leftBorder = previousPosition + 1
 		}
-
 		lastPosition[currentSymbol] = rightBorder
 
 		currentLength := rightBorder - leftBorder + 1
 		if currentLength > maximumLength {
 			maximumLength = currentLength
+			bestStart = leftBorder
 		}
 	}
 
-	return maximumLength
+	bestSubstring := string(symbols[bestStart : bestStart+maximumLength])
+	return SubstringResult{length: maximumLength, substring: bestSubstring}
 }
 
 func runLongestUniqueSubstring() {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 1024), 1024*1024)
-
 	if !scanner.Scan() {
 		fmt.Fprintln(os.Stderr, "Не удалось прочитать строку.")
 		return
 	}
-
-	input := scanner.Text()
-	fmt.Println(longestUniqueSubstring(input))
-
+	input := strings.TrimLeft(scanner.Text(), " \t\r\n\v\f")
+	result := longestUniqueSubstring(input)
+	fmt.Printf("%d (%s)\n", result.length, result.substring)
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Ошибка чтения строки:", err)
 	}
