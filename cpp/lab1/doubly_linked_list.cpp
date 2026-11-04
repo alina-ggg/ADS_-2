@@ -9,6 +9,7 @@ DNode* LPUSHHEAD(DNode*& head, DNode*& tail, const std::string& value) {
     } else {
         tail = newNode;
     }
+    head = newNode;
     return newNode;
 }
 

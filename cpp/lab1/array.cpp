@@ -101,3 +101,7 @@ void Strarray::MREADFROMFILE(const std::string& filename) {
         }
     }
 }
+std::string Strarray::MVALUE_index(int index) const {
+    if (index < 0 || index >= length) return "";
+    return data[index];
+}
