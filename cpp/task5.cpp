@@ -1,108 +1,95 @@
 // 7 вариант
-#include <algorithm>
 #include <iostream>
-#include <queue>
+#include <string>
+#include <sstream>
+#include "lab1/array.h" // Strarray - хранение введенных чисел
 
+// структура узла бинарного дерева
 struct TreeNode {
-    int key;
+    int value;
     TreeNode* left;
     TreeNode* right;
-
-    explicit TreeNode(int value)
-        : key(value), left(nullptr), right(nullptr) {}
+    TreeNode(int val) : value(val), left(nullptr), right(nullptr) {}
 };
 
-class BinarySearchTree {
-private:
-    TreeNode* root;
+// вставка элемента в BST
+void insertBST(TreeNode*& root, int value) {
+    if (root == nullptr) {
+        root = new TreeNode(value);
+        return;
+    }
 
-    void destroySubtree(TreeNode* node) {
-        if (node == nullptr) {
+    TreeNode* curr = root;
+    while (true) {
+        if (value == curr->value) {
             return;
-        }
-
-        destroySubtree(node->left);
-        destroySubtree(node->right);
-        delete node;
-    }
-
-public:
-    BinarySearchTree() : root(nullptr) {}
-
-    ~BinarySearchTree() {
-        destroySubtree(root);
-    }
-
-    void insert(int value) {
-        if (root == nullptr) {
-            root = new TreeNode(value);
-            return;
-        }
-
-        TreeNode* current = root;
-
-        while (true) {
-            if (value < current->key) {
-                if (current->left == nullptr) {
-                    current->left = new TreeNode(value);
-                    return;
-                }
-                current = current->left;
-            } else {
-                // Повторяющиеся ключи помещаются в правое поддерево
-                if (current->right == nullptr) {
-                    current->right = new TreeNode(value);
-                    return;
-                }
-                current = current->right;
+        } else if (value < curr->value) {
+            if (curr->left == nullptr) {
+                curr->left = new TreeNode(value);
+                return;
             }
-        }
-    }
-
-    int height() const {
-        if (root == nullptr) {
-            return 0;
-        }
-
-        // Обход по уровням не использует рекурсию и не зависит
-        // от глубины дерева
-        std::queue<const TreeNode*> nodes;
-        nodes.push(root);
-        int treeHeight = 0;
-
-        while (!nodes.empty()) {
-            const std::size_t nodesOnLevel = nodes.size();
-            ++treeHeight;
-
-            for (std::size_t index = 0; index < nodesOnLevel; ++index) {
-                const TreeNode* current = nodes.front();
-                nodes.pop();
-
-                if (current->left != nullptr) {
-                    nodes.push(current->left);
-                }
-                if (current->right != nullptr) {
-                    nodes.push(current->right);
-                }
+            curr = curr->left;
+        } else {
+            if (curr->right == nullptr) {
+                curr->right = new TreeNode(value);
+                return;
             }
+            curr = curr->right;
         }
-
-        return treeHeight;
     }
-};
+}
+
+// вычисление высоты дерева (рекурсивно)
+int getHeight(TreeNode* root) {
+    if (root == nullptr) {
+        return 0;
+    }
+    
+    int leftH = getHeight(root->left);
+    int rightH = getHeight(root->right);
+    
+    return 1 + (leftH > rightH ? leftH : rightH);
+}
+
+// освобождение памяти дерева
+void freeTree(TreeNode* root) {
+    if (root == nullptr) return;
+    freeTree(root->left);
+    freeTree(root->right);
+    delete root;
+}
 
 int main() {
-    BinarySearchTree tree;
-    int value;
-
-    // Ноль является признаком окончания ввода и в дерево не помещается
-    while (std::cin >> value) {
-        if (value == 0) {
-            break;
-        }
-        tree.insert(value);
+    std::cout << "Введите последовательность целых чисел, оканчивающуюся нулём:" << std::endl;
+    std::cout << "> ";
+    std::cout.flush();
+    
+    std::string inputLine;
+    std::getline(std::cin, inputLine);
+    
+    Strarray numbersStr;
+    std::istringstream iss(inputLine);
+    std::string token;
+    
+    while (iss >> token) {
+        numbersStr.MPUSH_end(token);
     }
-
-    std::cout << tree.height() << '\n';
+    
+    TreeNode* root = nullptr;
+    
+    for (int i = 0; i < numbersStr.MSIZE(); ++i) {
+        std::string numStr = numbersStr.MGET_value(i);
+        int num = std::stoi(numStr);
+        
+        if (num == 0) break;
+        
+        insertBST(root, num);
+        std::cout << "Число " << num << " обработано" << std::endl;
+    }
+    
+    int height = getHeight(root);
+    std::cout << "\nВысота дерева: " << height << std::endl;
+    
+    freeTree(root);
     return 0;
 }

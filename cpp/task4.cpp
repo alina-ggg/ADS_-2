@@ -1,84 +1,116 @@
 // 1 вариант
-#include "lab1/array.h"
-
 #include <iostream>
 #include <string>
-#include <vector>
+#include <sstream>
+#include "lab1/array.h" // Strarray - хранение исходного множества и результатов
+#include "lab1/stack.h" // Stack - хранение текущего подмножества
 
-class SubsetGenerator {
-private:
-    const Strarray& source;
-    std::vector<std::string> currentSubset;
-    std::size_t generatedCount;
+// генерация всех подмножеств заданного размера
+void generateSubsetsOfSize(
+    const Strarray& elements,
+    int index,
+    int targetSize,
+    int currentSize,
+    Stack& current,
+    Strarray& result
+) {
+    if (currentSize == targetSize) {
+        std::string subsetStr = "";
+        Stack tempStack;
 
-    void printCurrentSubset() {
-        std::cout << '{';
+        // перекладываем элементы для сохранения порядка
+        while (!current.isEmpty()) {
+            std::string val = current.pop();
+            tempStack.push(val);
+        }
 
-        for (std::size_t index = 0; index < currentSubset.size(); ++index) {
-            if (index > 0) {
-                std::cout << ", ";
+        // собираем строку и возвращаем элементы в стек
+        while (!tempStack.isEmpty()) {
+            std::string val = tempStack.pop();
+            current.push(val);
+            if (!subsetStr.empty()) {
+                subsetStr += ", " + val;
+            } else {
+                subsetStr = val;
             }
-            std::cout << currentSubset[index];
         }
 
-        std::cout << "}\n";
-        ++generatedCount;
+        result.MPUSH_end("{" + subsetStr + "}");
+        return;
     }
 
-    // Рекурсивно выбирает элементы, начиная с указанной позиции
-    void generateFrom(int startIndex, int requiredSize) {
-        if (static_cast<int>(currentSubset.size()) == requiredSize) {
-            printCurrentSubset();
-            return;
-        }
-
-        const int remaining = requiredSize - static_cast<int>(currentSubset.size());
-        const int lastPossibleIndex = source.MSIZE() - remaining;
-
-        for (int index = startIndex; index <= lastPossibleIndex; ++index) {
-            currentSubset.push_back(source.MVALUE_index(index));
-            generateFrom(index + 1, requiredSize);
-            currentSubset.pop_back();
-        }
+    if (index == elements.MSIZE()) {
+        return;
     }
 
-public:
-    explicit SubsetGenerator(const Strarray& array)
-        : source(array), generatedCount(0) {}
+    current.push(elements.MGET_value(index));
+    generateSubsetsOfSize(elements, index + 1, targetSize, currentSize + 1, current, result);
+    current.pop();
 
-    void generateAll() {
-        // Сначала выводим пустое множество, затем подмножества
-        // размером от 1 до N
-        for (int subsetSize = 0; subsetSize <= source.MSIZE(); ++subsetSize) {
-            generateFrom(0, subsetSize);
-        }
-    }
+    generateSubsetsOfSize(elements, index + 1, targetSize, currentSize, current, result);
+}
 
-    std::size_t getGeneratedCount() const {
-        return generatedCount;
+void generateAllSubsets(const Strarray& elements, Strarray& result) {
+    int n = elements.MSIZE();
+    Stack currentSubset;
+
+    for (int size = 0; size <= n; ++size) {
+        generateSubsetsOfSize(elements, 0, size, 0, currentSubset, result);
     }
-};
+}
 
 int main() {
-    int count;
-    if (!(std::cin >> count) || count < 0 || count > 25) {
-        std::cerr << "Количество элементов должно быть от 0 до 25.\n";
+    std::cout << "Введите элементы множества через пробел:" << std::endl;
+    std::cout << "> ";
+    std::cout.flush();
+
+    std::string inputLine;
+    std::getline(std::cin, inputLine);
+
+    if (inputLine.empty()) {
+        std::cout << "Ошибка: пустой ввод!" << std::endl;
         return 1;
     }
 
-    Strarray inputArray;
+    Strarray elements;
+    std::istringstream iss(inputLine);
+    std::string token;
 
-    for (int index = 0; index < count; ++index) {
-        std::string value;
-        if (!(std::cin >> value)) {
-            std::cerr << "Не удалось прочитать элемент массива.\n";
-            return 1;
-        }
-        inputArray.MPUSH_end(value);
+    while (iss >> token) {
+        elements.MPUSH_end(token);
     }
 
-    SubsetGenerator generator(inputArray);
-    generator.generateAll();
+    if (elements.MSIZE() == 0) {
+        std::cout << "Ошибка: не введено ни одного элемента!" << std::endl;
+        return 1;
+    }
+
+    std::cout << "\nВвод: S = {";
+    for (int i = 0; i < elements.MSIZE(); ++i) {
+        std::cout << elements.MGET_value(i);
+        if (i < elements.MSIZE() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << "}." << std::endl;
+
+    int n = elements.MSIZE();
+    int totalSubset = 1;
+    for (int i = 0; i < n; ++i) {
+        totalSubset *= 2;
+    }
+
+    Strarray result;
+    generateAllSubsets(elements, result);
+
+    std::cout << "Вывод: [";
+    for (int i = 0; i < result.MSIZE(); ++i) {
+        std::cout << result.MGET_value(i);
+        if (i < result.MSIZE() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << "]" << std::endl;
 
     return 0;
 }

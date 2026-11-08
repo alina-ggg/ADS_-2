@@ -1,184 +1,108 @@
-// 7 вариант
-#include "lab1/stack.h"
-
-#include <cctype>
 #include <iostream>
 #include <string>
+#include "lab1/array.h" // Strarray для хранения алфавита и результатов
+#include "lab1/stack.h" // Stack для проверки корректности XML
 
-namespace {
+bool isCorrectXML(const std::string& s) {
+    Stack stack;
+    int i = 0; // индекс текущего символа в строке
+    int n = s.length(); // длина строки
 
-const std::string ALPHABET = "abcdefghijklmnopqrstuvwxyz<>/";
-
-bool isValidTagName(const std::string& name) {
-    if (name.empty()) {
-        return false;
-    }
-
-    for (char symbol : name) {
-        if (symbol < 'a' || symbol > 'z') {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-// Проверка правильности XML с использованием стека
-bool isCorrectXML(const std::string& xml) {
-    Stack tags;
-    std::size_t position = 0;
-
-    while (position < xml.size()) {
-
-        // Пропуск пробелы и другие пробельные символы
-        if (std::isspace(static_cast<unsigned char>(xml[position]))) {
-            ++position;
+    while (i < n) {
+        // пропускаем пробелы
+        if (s[i] == ' ') {
+            ++i;
             continue;
         }
+        if (s[i] != '<') return false;
+        ++i;
+        if (i >= n) return false;
 
-        if (xml[position] != '<') {
-            return false;
+        bool isClosing = false;
+        if (s[i] == '/') {
+            isClosing = true;
+            ++i;
         }
 
-        std::size_t closingBracket = xml.find('>', position + 1);
-
-        if (closingBracket == std::string::npos) {
-            return false;
+        std::string tagName = "";
+        while (i < n && s[i] != '>') {
+            if (s[i] < 'a' || s[i] > 'z') return false;
+            tagName += s[i];
+            ++i;
         }
 
-        std::string tagBody = xml.substr(
-            position + 1,
-            closingBracket - position - 1
-        );
+        if (tagName.empty()) return false;
+        if (i >= n) return false;
+        ++i;
 
-        if (tagBody.empty()) {
-            return false;
-        }
-
-        bool isClosingTag = (tagBody[0] == '/');
-
-        std::string tagName = isClosingTag
-            ? tagBody.substr(1)
-            : tagBody;
-
-        if (!isValidTagName(tagName)) {
-            return false;
-        }
-
-        if (isClosingTag) {
-
-            if (tags.isEmpty()) {
-                return false;
+        if (isClosing) {
+            // закрывающийся теш
+            // проверяем что стек не пуст
+            if (stack.isEmpty()) return false;
+            // достаем последний открытый тег из стека
+            // имена открывающего и закрывающего тегов должны совпадать
+            if (stack.pop() != tagName) return false;
+            } else {
+                // открывающийся тег
+                stack.push(tagName);
             }
-
-            std::string openedTag = tags.pop();
-
-            if (openedTag != tagName) {
-                return false;
-            }
-
-        } else {
-            tags.push(tagName);
-        }
-
-        position = closingBracket + 1;
     }
-
-    return tags.isEmpty();
+    // в результате все октрытые теги должны быть закрыты - стек должен быть пуст
+    return stack.isEmpty();
 }
-
-// Восстановление XML заменой одного символа
-
-bool restoreXML(std::string& xml) {
-
-    if (isCorrectXML(xml)) {
-        return true;
-    }
-
-    // Два прохода
-    // 1. Сначала исправляем символы в закрывающих тегах
-    // 2. Затем проверяем остальные символы
-
-    for (int pass = 0; pass < 2; ++pass) {
-
-        for (std::size_t position = 0;
-             position < xml.size(); ++position) {
-
-            if (std::isspace(
-                static_cast<unsigned char>(xml[position]))) {
-                continue;
-            }
-
-            // Определяем, находится ли позиция внутри имени закрывающего тега
-            bool isClosingName = false;
-
-            for (std::size_t i = 0; i < position; ++i) {
-                if (xml[i] == '<') {
-                    isClosingName = false;
-                }
-
-                if (xml[i] == '/' &&
-                    i > 0 && xml[i - 1] == '<') {
-                    isClosingName = true;
-                }
-
-                if (xml[i] == '>') {
-                    isClosingName = false;
-                }
-            }
-
-            if (pass == 0 && !isClosingName) {
-                continue;
-            }
-
-            if (pass == 1 && isClosingName) {
-                continue;
-            }
-
-            char originalSymbol = xml[position];
-
-            for (char replacement : ALPHABET) {
-
-                if (replacement == originalSymbol) {
-                    continue;
-                }
-
-                xml[position] = replacement;
-
-                if (isCorrectXML(xml)) {
-                    return true;
-                }
-            }
-
-            xml[position] = originalSymbol;
-        }
-    }
-
-    return false;
-}
-
-} // namespace
 
 int main() {
+    std::cout << "Введите XML-строку:" << std::endl;
+    std::cout.flush();
 
-    std::string damagedXML;
+    std::string s;
+    std::getline(std::cin, s);
 
-    // Считываем всю строку вместе с пробелами
-    if (!std::getline(std::cin, damagedXML)) {
-        std::cerr << "Не удалось прочитать XML-строку.\n";
+    if (s.empty()) {
+        std::cout << "Строка пуста!" << std::endl;
         return 1;
     }
 
-    if (damagedXML.size() < 7 || damagedXML.size() > 1000) {
-        std::cerr << "Длина строки должна быть от 7 до 1000 символов.\n";
-        return 1;
+    Strarray alphabet;
+    for (char c = 'a'; c <= 'z'; ++c) {
+        alphabet.MPUSH_end(std::string(1, c));
+    }
+    alphabet.MPUSH_end("<");
+    alphabet.MPUSH_end(">");
+    alphabet.MPUSH_end("/");
+    alphabet.MPUSH_end(" ");
+
+    int n = s.length();
+    Strarray results; // хранение всех найденных вариантов
+    // перебираем каждую позицию в строке - ищем место ошибки
+    for (int i = 0; i < n; ++i) {
+        char original = s[i]; // запоминание оригинального символа
+
+        // перебор всех символов алфавита из Strarray
+        for (int j = 0; j < alphabet.MSIZE(); ++j) {
+            std::string rep = alphabet.MGET_value(j);
+            if (rep.empty()) continue;
+
+            char c = rep[0];
+            if (c == original) continue;
+
+            s[i] = c;
+
+            if (isCorrectXML(s)) {
+                results.MPUSH_end(s);
+            }
+        }
+        s[i] = original;
     }
 
-    if (restoreXML(damagedXML)) {
-        std::cout << damagedXML << '\n';
+    if (results.MSIZE() == 0) {
+        std::cout << "Incorrect" << std::endl;
     } else {
-        std::cout << "Incorrect\n";
+        std::cout << "Найдено " << results.MSIZE() << " вариант(а/ов):" << std::endl;
+    
+        for (int k = 0; k < results.MSIZE(); ++k) {
+            std::cout << results.MGET_value(k) << std::endl;
+        }
     }
-
     return 0;
 }

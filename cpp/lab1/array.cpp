@@ -50,6 +50,13 @@ void Strarray::MGET_index(int index) const {
     std::cout << data[index] << "\n";
 }
 
+std::string Strarray::MGET_value(int index) const {
+    if (index < 0 || index >= length) {
+        return "";  // Возвращаем пустую строку при ошибке
+    }
+    return data[index];  // Возвращаем значение по индексу
+}
+
 void Strarray::MDEL(int index) {
     if (index < 0 || index >= length) {
         std::cout << "Ошибка: Индекс вне диапазона\n";
@@ -100,8 +107,4 @@ void Strarray::MREADFROMFILE(const std::string& filename) {
             MPUSH_end(val);
         }
     }
-}
-std::string Strarray::MVALUE_index(int index) const {
-    if (index < 0 || index >= length) return "";
-    return data[index];
 }
