@@ -61,7 +61,7 @@ public:
     }
     
     void print() const {
-        std::cout << "\n=== Хеш-таблица (Линейное апробирование) ===" << std::endl;
+        std::cout << "\n Хеш-таблица (Линейное апробирование)" << std::endl;
         for (int i = 0; i < TABLE_SIZE; ++i) {
             std::string cell = table.MGET_value(i);
             std::cout << "Ячейка " << i << ": ";
@@ -121,7 +121,7 @@ public:
     }
     
     void print() const {
-        std::cout << "\n=== Хеш-таблица (Двойное хеширование) ===" << std::endl;
+        std::cout << "\n Хеш-таблица (Двойное хеширование)" << std::endl;
         for (int i = 0; i < TABLE_SIZE; ++i) {
             std::string cell = table.MGET_value(i);
             std::cout << "Ячейка " << i << ": ";
