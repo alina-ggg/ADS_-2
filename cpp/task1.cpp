@@ -1,3 +1,4 @@
+// 7 вариант
 #include <iostream>
 #include <string>
 #include "lab1/array.h" // Strarray для хранения алфавита и результатов
