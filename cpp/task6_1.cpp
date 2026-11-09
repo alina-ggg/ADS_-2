@@ -8,8 +8,8 @@
 #include "lab1/array.h"
 
 int main() {
-    // ввод значений
-    std::cout << "Введите значения для вставки в хеш-таблицу через пробел:" << std::endl;
+    std::cout << "Введите пары ключ:значение через пробел:" << std::endl;
+    std::cout << "> ";
     std::cout.flush();
     
     std::string inputLine;
@@ -20,88 +20,94 @@ int main() {
         return 1;
     }
     
-    // разбираем строку на числа
-    Strarray valuesStr;
+    Strarray keysStr, valuesStr;
     std::istringstream iss(inputLine);
     std::string token;
     
     while (iss >> token) {
-        valuesStr.MPUSH_end(token);
-    }
-    
-    if (valuesStr.MSIZE() == 0) {
-        std::cout << "Ошибка: не введено ни одного значения!" << std::endl;
-        return 1;
-    }
-    
-    // сыводим введённые значения
-    std::cout << "\nВведено " << valuesStr.MSIZE() << " значений: ";
-    for (int i = 0; i < valuesStr.MSIZE(); ++i) {
-        std::cout << valuesStr.MGET_value(i);
-        if (i < valuesStr.MSIZE() - 1) std::cout << " ";
-    }
-    std::cout << std::endl;
-    
-    // создание двух хеш-таблиц
-    HashTableLinear tableLinear;
-    HashTableDouble tableDouble;
-    
-    // вставка значений в обе таблицы
-    std::cout << "\nВставка значений" << std::endl;
-    for (int i = 0; i < valuesStr.MSIZE(); ++i) {
-        int num = std::stoi(valuesStr.MGET_value(i));
-        
-        bool ok1 = tableLinear.insert(num);
-        bool ok2 = tableDouble.insert(num);
-        
-        std::cout << "Вставка " << num << ": ";
-        if (ok1 && ok2) {
-            std::cout << "успешно в обе таблицы" << std::endl;
-        } else if (ok1) {
-            std::cout << "успешно в линейную, двойная заполнена" << std::endl;
-        } else if (ok2) {
-            std::cout << "успешно в двойную, линейная заполнена" << std::endl;
+        size_t pos = token.find(':');
+        if (pos != std::string::npos) {
+            keysStr.MPUSH_end(token.substr(0, pos));
+            valuesStr.MPUSH_end(token.substr(pos + 1));
         } else {
-            std::cout << "обе таблицы заполнены!" << std::endl;
+            std::cout << "Ошибка: неверный формат '" << token << "'. Используйте ключ:значение" << std::endl;
+            return 1;
         }
     }
     
-    // вывод таблиц
+    if (keysStr.MSIZE() == 0) {
+        std::cout << "Ошибка: не введено ни одной пары!" << std::endl;
+        return 1;
+    }
+    
+    std::cout << "\nВведено " << keysStr.MSIZE() << " пар:" << std::endl;
+    for (int i = 0; i < keysStr.MSIZE(); ++i) {
+        std::cout << "  [" << keysStr.MGET_value(i) << " : " << valuesStr.MGET_value(i) << "]" << std::endl;
+    }
+    
+    HashTableLinear tableLinear;
+    HashTableDouble tableDouble;
+    
+    std::cout << "\n Вставка значений" << std::endl;
+    for (int i = 0; i < keysStr.MSIZE(); ++i) {
+        int key = std::stoi(keysStr.MGET_value(i));
+        int value = std::stoi(valuesStr.MGET_value(i));
+        
+        int idx1_before = tableLinear.search(key);
+        
+        bool ok1 = tableLinear.insert(key, value);
+        bool ok2 = tableDouble.insert(key, value);
+        
+        std::cout << "Вставка [" << key << ":" << value << "]: ";
+        if (ok1 && ok2) {
+            if (idx1_before != -1) {
+                std::cout << "ключ обновлен (перезаписан) в обеих таблицах" << std::endl;
+            } else {
+                std::cout << "успешно в обе таблицы" << std::endl;
+            }
+        } else {
+            std::cout << "ошибка: таблицы заполнены!" << std::endl;
+        }
+    }
+    
     tableLinear.print();
     tableDouble.print();
     
-    // демонстрация поиска
-    std::cout << "\n Поиск элементов " << std::endl;
-    for (int i = 0; i < valuesStr.MSIZE(); ++i) {
-        int num = std::stoi(valuesStr.MGET_value(i));
-        int idx1 = tableLinear.search(num);
-        int idx2 = tableDouble.search(num);
-        std::cout << "Поиск " << num << ": линейная[ячейка " << idx1 
-                  << "], двойная[ячейка " << idx2 << "]" << std::endl;
+    std::cout << "\n Поиск элементов" << std::endl;
+    for (int i = 0; i < keysStr.MSIZE(); ++i) {
+        int key = std::stoi(keysStr.MGET_value(i));
+        int idx1 = tableLinear.search(key);
+        int idx2 = tableDouble.search(key);
+        
+        std::string val1 = (idx1 != -1) ? tableLinear.getValue(key) : "не найдено";
+        std::string val2 = (idx2 != -1) ? tableDouble.getValue(key) : "не найдено";
+        
+        std::cout << "Поиск ключа " << key << ": " 
+                  << "линейная[ячейка " << idx1 << ", значение " << val1 << "], "
+                  << "двойная[ячейка " << idx2 << ", значение " << val2 << "]" << std::endl;
     }
-    
-    // демонстрация удаления
+   
     std::cout << "\n Удаление элемента" << std::endl;
-    std::cout << "Введите число для удаления (или 0 для пропуска): ";
+    std::cout << "Введите ключ для удаления (или 0 для пропуска): ";
     std::cout.flush();
     
     int toDelete;
     std::cin >> toDelete;
     
     if (toDelete != 0) {
-        std::cout << "\nУдаляем элемент " << toDelete << "..." << std::endl;
+        std::cout << "\nУдаляем ключ " << toDelete << "..." << std::endl;
         
         bool removed1 = tableLinear.remove(toDelete);
         bool removed2 = tableDouble.remove(toDelete);
         
         if (removed1 && removed2) {
-            std::cout << "Элемент " << toDelete << " удалён из обеих таблиц." << std::endl;
+            std::cout << "Ключ " << toDelete << " удалён из обеих таблиц." << std::endl;
         } else if (removed1) {
-            std::cout << "Элемент " << toDelete << " удалён из линейной, не найден в двойной." << std::endl;
+            std::cout << "Ключ " << toDelete << " удалён из линейной, не найден в двойной." << std::endl;
         } else if (removed2) {
-            std::cout << "Элемент " << toDelete << " удалён из двойной, не найден в линейной." << std::endl;
+            std::cout << "Ключ " << toDelete << " удалён из двойной, не найден в линейной." << std::endl;
         } else {
-            std::cout << "Элемент " << toDelete << " не найден ни в одной таблице!" << std::endl;
+            std::cout << "Ключ " << toDelete << " не найден ни в одной таблице!" << std::endl;
         }
         
         std::cout << "\nПосле удаления:" << std::endl;
@@ -111,7 +117,6 @@ int main() {
         std::cout << "Удаление пропущено." << std::endl;
     }
     
-    // теоретическое сравнение методов
     std::cout << "\n Сравнение методов" << std::endl;
     std::cout << "Линейное апробирование:" << std::endl;
     std::cout << "  Формула: (h(k) + i) % m" << std::endl;

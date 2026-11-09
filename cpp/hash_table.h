@@ -28,27 +28,55 @@ public:
         }
     }
     
-    bool insert(int key) {
-        std::string keyStr = std::to_string(key);
+    bool insert(int key, int value) {
+        std::string entry = std::to_string(key) + ":" + std::to_string(value);
         for (int i = 0; i < TABLE_SIZE; ++i) {
             int index = (hash1(key) + i) % TABLE_SIZE;
             std::string cell = table.MGET_value(index);
+            
             if (cell == EMPTY || cell == DELETED) {
-                table.MREPLACE(index, keyStr);
+                table.MREPLACE(index, entry);
                 return true;
+            }
+
+            size_t pos = cell.find(':');
+            if (pos != std::string::npos) {
+                int existingKey = std::stoi(cell.substr(0, pos));
+                if (existingKey == key) {
+                    table.MREPLACE(index, entry);
+                    return true; 
+                }
             }
         }
         return false;
     }
-    
+
     int search(int key) {
         for (int i = 0; i < TABLE_SIZE; ++i) {
             int index = (hash1(key) + i) % TABLE_SIZE;
             std::string cell = table.MGET_value(index);
             if (cell == EMPTY) return -1;
-            if (cell == std::to_string(key)) return index;
+            
+            size_t pos = cell.find(':');
+            if (pos != std::string::npos) {
+                int existingKey = std::stoi(cell.substr(0, pos));
+                if (existingKey == key) return index;
+            }
         }
         return -1;
+    }
+    
+    // получить значение по ключу
+    std::string getValue(int key) {
+        int idx = search(key);
+        if (idx != -1) {
+            std::string cell = table.MGET_value(idx);
+            size_t pos = cell.find(':');
+            if (pos != std::string::npos) {
+                return cell.substr(pos + 1);
+            }
+        }
+        return "не найдено";
     }
     
     bool remove(int key) {
@@ -84,16 +112,27 @@ public:
         }
     }
     
-    bool insert(int key) {
-        std::string keyStr = std::to_string(key);
+    bool insert(int key, int value) {
+        std::string entry = std::to_string(key) + ":" + std::to_string(value);
         int h1 = hash1(key);
         int h2 = hash2(key);
+        
         for (int i = 0; i < TABLE_SIZE; ++i) {
             int index = (h1 + i * h2) % TABLE_SIZE;
             std::string cell = table.MGET_value(index);
+            
             if (cell == EMPTY || cell == DELETED) {
-                table.MREPLACE(index, keyStr);
+                table.MREPLACE(index, entry);
                 return true;
+            }
+            
+            size_t pos = cell.find(':');
+            if (pos != std::string::npos) {
+                int existingKey = std::stoi(cell.substr(0, pos));
+                if (existingKey == key) {
+                    table.MREPLACE(index, entry);
+                    return true;
+                }
             }
         }
         return false;
@@ -106,9 +145,26 @@ public:
             int index = (h1 + i * h2) % TABLE_SIZE;
             std::string cell = table.MGET_value(index);
             if (cell == EMPTY) return -1;
-            if (cell == std::to_string(key)) return index;
+            
+            size_t pos = cell.find(':');
+            if (pos != std::string::npos) {
+                int existingKey = std::stoi(cell.substr(0, pos));
+                if (existingKey == key) return index;
+            }
         }
         return -1;
+    }
+    
+    std::string getValue(int key) {
+        int idx = search(key);
+        if (idx != -1) {
+            std::string cell = table.MGET_value(idx);
+            size_t pos = cell.find(':');
+            if (pos != std::string::npos) {
+                return cell.substr(pos + 1);
+            }
+        }
+        return "не найдено";
     }
     
     bool remove(int key) {
